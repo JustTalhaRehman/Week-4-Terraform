@@ -1,7 +1,7 @@
 name: "Terraform CI/CD Pipeline"
 
 on:
-  workflow_dispatch:  # Manual trigger ke liye (env select karne ka option milega)
+  workflow_dispatch:
     inputs:
       environment:
         description: "Environment to deploy (dev/staging/prod)"
@@ -17,10 +17,9 @@ on:
       - main
 
 jobs:
-  terraform:
-    name: "Terraform Plan & Apply"
+  plan:
+    name: "Terraform Plan"
     runs-on: ubuntu-latest
-
     env:
       ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
       ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
@@ -46,28 +45,17 @@ jobs:
       - name: Terraform Plan
         run: terraform plan -out=tfplan -var="environment=${ENVIRONMENT}"
 
-      - name: Upload Plan as Artifact
+      - name: Upload Plan
         uses: actions/upload-artifact@v4
         with:
           name: tfplan
           path: tfplan
 
-  manual-approval:
-    name: "Manual Approval"
-    runs-on: ubuntu-latest
-    needs: terraform
-    steps:
-      - name: Wait for Approval
-        uses: hmarr/await-approval-action@v1
-        with:
-          approvers: "Talha-WPBrigade" # 👈 yahan apna GitHub username
-          timeout: 30m
-
   apply:
     name: "Terraform Apply"
     runs-on: ubuntu-latest
-    needs: manual-approval
-
+    needs: plan
+    environment: ${{ github.event.inputs.environment || 'dev' }} # ✅ Native approval trigger
     env:
       ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
       ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
@@ -84,7 +72,7 @@ jobs:
         with:
           terraform_version: 1.8.5
 
-      - name: Download Plan Artifact
+      - name: Download Plan
         uses: actions/download-artifact@v4
         with:
           name: tfplan
@@ -94,4 +82,4 @@ jobs:
         run: terraform init -backend-config="key=${ENVIRONMENT}/terraform.tfstate"
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve "tfplan"
+        run: terraform apply -auto-approve tfplan
