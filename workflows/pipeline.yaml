@@ -1,0 +1,60 @@
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  TF_VAR_location: "eastus"
+
+stages:
+- stage: Plan
+  displayName: "Terraform Plan"
+  jobs:
+  - job: plan
+    steps:
+    - task: TerraformInstaller@1
+      displayName: Install Terraform
+      inputs:
+        terraformVersion: 'latest'
+
+    - script: |
+        terraform init
+        terraform plan -out=tfplan
+      displayName: 'Terraform Init & Plan'
+
+    - publish: tfplan
+      artifact: tfplan-file
+      displayName: "Publish tfplan as artifact"
+
+- stage: Approval
+  displayName: "Manual Approval"
+  dependsOn: Plan
+  jobs:
+  - job: WaitForApproval
+    pool: server
+    steps:
+    - task: ManualValidation@0
+      inputs:
+        notifyUsers: ''
+        instructions: 'Please review the tfplan output artifact and approve to continue.'
+
+- stage: Apply
+  displayName: "Terraform Apply"
+  dependsOn: Approval
+  condition: succeeded()
+  jobs:
+  - job: apply
+    steps:
+    - task: TerraformInstaller@1
+      displayName: Install Terraform
+      inputs:
+        terraformVersion: 'latest'
+
+    - download: current
+      artifact: tfplan-file
+
+    - script: |
+        terraform init
+        terraform apply "tfplan"
+      displayName: 'Terraform Apply using tfplan'
