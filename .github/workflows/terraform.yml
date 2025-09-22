@@ -25,7 +25,7 @@ jobs:
           terraform_version: 1.8.0
 
       - name: Terraform Init
-        run: terraform init
+        run: terraform init -input=false
 
       - name: Terraform Validate
         run: terraform validate
@@ -33,22 +33,25 @@ jobs:
       - name: Terraform Plan
         run: terraform plan -out=tfplan
 
-      - name: Upload tfplan
+      - name: Upload plan + lockfile
         uses: actions/upload-artifact@v4
         with:
-          name: tfplan
-          path: tfplan
+          name: tf-artifacts
+          path: |
+            tfplan
+            .terraform.lock.hcl
 
   apply:
     needs: terraform
     runs-on: ubuntu-latest
     environment:
-      name: Manual-Approval   # 👈 YE CRUCIAL HAI
+      name: production   # GitHub environment approval popup ke liye
     env:
       ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
       ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
       ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
       ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -58,10 +61,13 @@ jobs:
         with:
           terraform_version: 1.8.0
 
-      - name: Download tfplan
+      - name: Download plan + lockfile
         uses: actions/download-artifact@v4
         with:
-          name: tfplan
+          name: tf-artifacts
+
+      - name: Terraform Init (again for apply)
+        run: terraform init -input=false
 
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
