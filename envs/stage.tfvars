@@ -15,7 +15,7 @@ subnets = {
 # AKS Config
 aks_name        = "aks-lab-stage"
 dns_prefix      = "akslabstage"
-aks_version     = ""              # auto pick latest
+aks_version     = "1.32.7"              # auto pick latest
 node_pool_name  = "agentpool"
 node_count      = 2
 vm_size         = "Standard_B2s"
