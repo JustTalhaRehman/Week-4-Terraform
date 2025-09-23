@@ -1,45 +1,58 @@
+
 # Resource Group
+
 resource "azurerm_resource_group" "rg" {
-  name     = "rg-terraform-lab"
-  location = "eastus"
+  name     = var.resource_group_name  # Comes from variables.tf & dev.tfvars/prod.tfvars
+  location = var.location             # Comes from variables.tf & dev.tfvars/prod.tfvars
 }
+
 
 # VNet Module
+
 module "vnet" {
   source              = "./modules/vnet"
-  vnet_name           = "vnet-lab"
-  address_space       = ["10.0.0.0/16"]
-  subnets = {
-    "aks-subnet"   = "10.0.1.0/24",
-    "appgw-subnet" = "10.0.2.0/24"
-  }
+
+  # Using variables instead of hardcoded values
+  vnet_name           = var.vnet_name
+  address_space       = var.address_space
+  subnets             = var.subnets
+
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
 }
+
 
 # AKS Module
+
 module "aks" {
   source              = "./modules/aks"
-  aks_name            = "aks-lab"
+
+  aks_name            = var.aks_name
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
-  dns_prefix          = "akslab"
-  aks_version = "" 
-  node_pool_name      = "agentpool"
-  node_count          = 1               # minimal to save cost
-  vm_size             = "Standard_B2s"  # free-tier compatible
+  dns_prefix          = var.dns_prefix
+  aks_version         = var.aks_version
+
+  node_pool_name      = var.node_pool_name
+  node_count          = var.node_count
+  vm_size             = var.vm_size
+
   subnet_id           = module.vnet.subnet_ids["aks-subnet"]
-  service_cidr        = "10.240.0.0/16"
-  dns_service_ip      = "10.240.0.10"
+  service_cidr        = var.service_cidr
+  dns_service_ip      = var.dns_service_ip
 }
 
-# App Gateway Module
+
+# Application Gateway Module
+
 module "appgw" {
   source              = "./modules/appgw"
-  appgw_name          = "appgw-lab"
+
+  appgw_name          = var.appgw_name
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
+
   subnet_id           = module.vnet.subnet_ids["appgw-subnet"]
-  public_ip_name      = "pip-appgw-lab"
-  capacity            = 1               # minimal to save cost
+  public_ip_name      = var.public_ip_name
+  capacity            = var.appgw_sku_cap
 }
