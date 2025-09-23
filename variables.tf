@@ -59,7 +59,7 @@ variable "dns_prefix" {
 variable "aks_version" {
   description = "AKS Kubernetes version (leave blank for latest)"
   type        = string
-  default     = "1.32.7"
+  default     = ""
 }
 
 variable "node_pool_name" {
