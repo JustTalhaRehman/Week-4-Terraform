@@ -6,7 +6,7 @@ on:
       environment:
         description: "Select environment (dev/stage/prod)"
         required: true
-        default: "prod"
+        default: "stage"
 
 jobs:
   plan:
